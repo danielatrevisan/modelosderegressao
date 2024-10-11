@@ -1,0 +1,227 @@
+---
+title: "Mixed-Effects Models"
+output: html_document
+date: "2024-10-01"
+author: David Prata
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Modelos de Efeito Misto
+Normalmente, tratamos todas as variáveis explicativas categóricas como se fossem iguais. Isso é certamente o que Fisher tinha em mente quando inventou a análise de variância nas décadas de 1920 e 1930. Mas foi Eisenhart (1947) que percebeu que na verdade havia dois tipos fundamentalmente diferentes de Variáveis explicativas: Ele chamou isso de efeitos fixos e efeitos aleatórios. Vai exigir muita prática
+antes de ter certeza de decidir se uma determinada variável explicativa categórica deve ser tratada como um efeito fixo ou um efeito aleatório, mas em essência:
+
+- Os efeitos fixos influenciam apenas a média de y;
+
+- Os efeitos aleatórios influenciam apenas a variância de y.
+
+Os efeitos fixos são constantes desconhecidas a serem estimadas a partir dos dados. Efeitos aleatórios governam a variância -
+Estrutura de covariância da variável de resposta. Aninhamento (ou estrutura hierárquica) de efeitos aleatórios é uma fonte clássica de pseudo-replicação. Efeitos aleatórios que vêm do mesmo grupo serão correlacionados, e isso contraria um dos pressupostos fundamentais dos modelos estatísticos padrão: independência de erros. 
+Efeitos aleatórios ocorrem em dois tipos contrastantes de circunstâncias:
+
+- estudos observacionais com estrutura hierárquica;
+
+- experimentos projetados com diferentes escalas espaciais ou temporais.
+
+Os efeitos fixos têm níveis de fator informativos, enquanto os efeitos aleatórios geralmente têm níveis de fatores não informativos.
+A distinção é melhor vista por um exemplo. Na maioria das espécies de mamíferos, a variável categórica sexo tem dois níveis: masculino e feminino. Para qualquer pessoa que você encontrar, o conhecimento de que é, digamos, mulher transmite uma grande
+informações sobre o indivíduo, e essas informações se baseiam na experiência adquirida de muitos outros
+indivíduos do sexo feminino. Uma mulher terá todo um conjunto de atributos (associados ao fato de ela ser mulher)
+não importa de que população esse indivíduo foi retirado. Pegue uma variável categórica diferente, como genótipo.
+Se tivermos dois genótipos em uma população, podemos rotulá-los como A e B. Se pegarmos mais dois genótipos de
+uma população diferente, podemos rotulá-los de A e B também. Em um caso como este, o rótulo A não transmite
+qualquer informação sobre o genótipo, exceto que provavelmente é diferente do genótipo B. 
+No caso do sexo, o nível do fator (masculino ou feminino) é informativo: o sexo é um efeito fixo. No caso do sexo, o nível do fator (masculino ou feminino) é informativo: o sexo é um efeito fixo. No caso do genótipo, o nível do fator (A ou B) não é informativo: o genótipo é um efeito aleatório.
+
+Os efeitos aleatórios têm níveis de fatores extraídos de uma população grande (potencialmente muito grande) na qual os indivíduos diferem de várias maneiras, mas não sabemos exatamente como ou por que eles diferem. Os indivíduos diferem de muitas maneiras, mas não sabemos exatamente como ou por que eles diferem. 
+
+O ponto importante é que, como os efeitos aleatórios vêm de uma grande população, não há muito sentido em se concentrar em estimar as médias de nosso pequeno subconjunto de níveis de fatores, e não faz sentido comparar pares individuais de médias para diferentes níveis de fatores. Muito melhor reconhecê-los pelo que são, amostras aleatórias de uma população muito maior e se concentrar em sua variância. Esta é a variação adicional causada por diferenças entre os níveis dos efeitos aleatórios.
+
+A análise de componentes de variância tem tudo a ver com estimar o tamanho dessa variância e calcular sua contribuição percentual para a variação geral. Existem cinco suposições fundamentais dos modelos lineares de efeitos mistos:
+
+- Os erros dentro do grupo são independentes com média zero e variância σ2.
+
+- Os erros dentro do grupo são independentes dos efeitos aleatórios.
+
+- Os efeitos aleatórios são normalmente distribuídos com média zero e matriz de covariância.
+
+- Os efeitos aleatórios são independentes em diferentes grupos.
+
+- A matriz de covariância não depende do grupo.
+
+A validade destas suposições precisa ser testada empregando uma série de métodos de plotagem envolvendo os resíduos, os valores ajustados e os efeitos aleatórios previstos. Os truques com modelos de efeitos mistos são:
+
+- aprender quais variáveis são efeitos aleatórios;
+
+- especificar os efeitos fixos e aleatórios na fórmula do modelo;
+
+- acertar a estrutura de aninhamento dos efeitos aleatórios;
+
+- lembrar de obter a biblioteca(lme4) ou biblioteca(nlme) para iniciar.
+
+As questões enquadram-se em duas grandes categorias: 
+
+- questões sobre o desenho experimental e a gestão do erro experimental (por exemplo, onde ocorre a maior parte da variação e onde seria mais rentável aumentar a replicação?); 
+
+- e questões sobre a estrutura hierárquica e a magnitude relativa da variação em diferentes níveis dentro da hierarquia (por exemplo, estudos sobre a genética de indivíduos dentro de famílias, famílias dentro de comunidades, e das comunidades em municípios, para descobrir a importância relativa da variação genética e fenotípica).
+
+A maioria dos modelos ANOVA baseiam-se na suposição de que existe um único termo de erro. Mas em estudos hierárquicos e experimentos aninhados, onde os dados são coletados em duas ou mais escalas espaciais diferentes, há uma variação de erro diferente para cada escala espacial diferente. Existem dois conjuntos de circunstâncias razoavelmente claros em que sua primeira escolha seria usar um modelo linear de efeitos mistos: 
+
+- você quer fazer análise de variância porque todas as suas variáveis explicativas categóricas são efeitos aleatórios e você não tem nenhum efeito fixo; 
+
+- ou você tem efeitos fixos, mas também tem pseudoreplicação de um tipo ou de outro
+(por exemplo, pseudoreplicação temporal resultante de medições repetidas nos mesmos indivíduos).
+
+Para testar se você deve usar um modelo com efeitos mistos ou apenas um modelo linear simples e antigo, Douglas Bates escreveu no arquivo de ajuda do R: “Eu recomendaria o teste da razão de verossimilhança contra um modelo linear ajustado por lm".
+
+# Replicação e pseudoreplicação
+
+Para serem qualificadas como réplicas, as medições devem ter as seguintes propriedades:
+
+- Elas devem ser independentes.
+
+- Não devem fazer parte de uma série temporal (os dados recolhidos no mesmo local em ocasiões sucessivas não são independentes).
+
+- Elas não devem ser agrupadas em um só lugar (agregar as réplicas significa que elas não estão espacialmente independentes).
+
+- Devem ter uma escala espacial adequada;
+
+- Idealmente, uma réplica de cada tratamento deveria ser agrupada em um bloco e todo o experimento repetido em muitos blocos diferentes.
+
+- Medidas repetidas (por exemplo, do mesmo indivíduo ou da mesma localização espacial) não são réplicas (isto é provavelmente a causa mais comum de pseudoreplicação no trabalho estatístico).
+
+A pseudoreplicação ocorre quando você analisa os dados como se tivesse mais graus de liberdade do que realmente tem. Existem dois tipos de pseudoreplicação:
+
+- pseudoreplicação temporal, envolvendo medidas repetidas do mesmo indivíduo;
+
+- pseudoreplicação espacial, envolvendo diversas medições feitas na mesma vizinhança.
+
+A pseudoreplicação é um problema porque uma das suposições mais importantes da análise estatística padrão é a independência de erros. Medidas repetidas ao longo do tempo no mesmo indivíduo terão
+erros porque as peculiaridades do indivíduo serão refletidas em todas as medições feitas nele (as medidas repetidas serão correlacionadas temporalmente entre si). Amostras retiradas da mesma vizinhança terão erros não independentes porque as peculiaridades da localização serão comuns a todas as amostras (por exemplo,
+os rendimentos serão todos altos em uma fase boa e baixos em uma fase ruim).
+
+A pseudoreplicação geralmente é bastante fácil de detectar. A pergunta a fazer é esta. Quantos graus de liberdade
+por erro o experimento realmente tem? Se um experimento de campo parece ter muitos graus de liberdade, provavelmente é pseudoreplicado. Tomemos como exemplo o controle de pragas de insetos nas plantas. São 20 parcelas, 10 pulverizadas e 10 não pulverizadas. Dentro de cada parcela existem 50 plantas. Cada planta é medida cinco vezes durante a estação de crescimento. Agora, este experimento gera 20 × 50 × 5 = 5.000 números. Existem dois tratamentos de pulverização, portanto deve haver 1 grau de liberdade para pulverização e 4.998 graus de liberdade para erro. Ou deve haver? Conte as réplicas neste experimento. Medições repetidas nas mesmas plantas (as cinco ocasiões de amostragem) certamente não são réplicas. As 50 plantas individuais dentro de cada quadrante também não são réplicas. A razão para isto é que as condições dentro de cada quadrante são muito provavelmente únicas e, portanto, todas as 50 plantas experimentarão mais ou menos o mesmo conjunto único de condições, independentemente do tratamento de pulverização que recebam. Na verdade, existem 10 réplicas neste experimento.
+Existem 10 parcelas pulverizadas e 10
+parcelas não pulverizadas, e cada parcela produzirá apenas um dado independente para a variável de resposta (a média
+proporção de área foliar consumida por insetos, por exemplo). Assim, existem 9 graus de liberdade dentro de cada
+tratamento, e 2 × 9 = 18 graus de liberdade para erro no experimento como um todo. Não é difícil encontrar
+exemplos de pseudoreplicação nesta escala na literatura (Hurlbert 1984). O problema é que isso leva
+o relato de grandes quantidades de resultados espúriamente significativos (com 4.998 graus de liberdade para erro, é quase
+impossível não ter diferenças significativas). A primeira habilidade a ser adquirida pelo experimentador iniciante é
+a capacidade de planejar um experimento que seja replicado adequadamente. Existem várias coisas que você pode fazer quando
+seus dados são pseudoreplicados:
+
+- Faça a mensuração da pseudo-replicação e faça sua análise estatística sobre as médias.
+
+- Faça análises separadas para cada período de tempo.
+
+- Use a análise de série temporal adequada ou modelos de efeitos mistos.
+
+# A função lme
+
+A especificação dos efeitos fixos e aleatórios na fórmula do modelo é feita com duas partes. Suponha que não haja efeitos fixos, de modo que todas as variáveis categóricas sejam efeitos aleatórios. Então o efeito fixo simplesmente estima a interceptação (parâmetro 1): 
+
+- fixed = y ~ 1
+
+O efeito fixo (uma parte obrigatória da estrutura lme) é apenas o valor da média geral da variável de resposta y ~ 1. A parte "fixed =" da fórmula é opcional se você colocar este objeto primeiro. 
+
+Os efeitos aleatórios mostram as identidades das variáveis aleatórias e suas localizações relativas na hierarquia. Os três efeitos aleatórios (a, b e c) são especificados assim: 
+
+- random = ~ 1 | a/b/c
+
+e neste caso a frase random = não é opcional. Um detalhe importante a ser observado é que o nome da variável resposta (y) não se repete na fórmula de efeitos aleatórios: há um espaço em branco à esquerda do til ~. Na maioria dos modelos de efeitos mistos, assumimos que os efeitos aleatórios têm média zero e que
+estamos interessados em quantificar a variação no intercepto causada por diferenças entre os níveis dos fatores do efeitos aleatórios. Após a interceptação vem a barra vertical | que é lido como “dado o seguinte arranjo espacial das variáveis aleatórias”. Neste exemplo, existem três efeitos aleatórios com 'c aninhado em b que por sua vez está aninhado em a'. Os fatores são separados por barras e as variáveis são listadas da esquerda para a direita em ordem decrescente de escala espacial (ou temporal). Isso só ficará claro com a prática, mas é uma ideia simples. As fórmulas são montadas assim:
+
+lme(fixed = y ~ 1, random = ~ 1 | a/b/c)
+
+# Experimentos projetados com diferentes escalas espaciais: parcelas divididas (Split plots)
+
+A distinção importante em modelos com variáveis explicativas categóricas é entre os casos em que os dados provêm de um experimento planejado, no qual os tratamentos foram alocados em locais ou sujeitos aleatoriamente, e os casos em que os dados provêm de um estudo observacional no qual as variáveis categóricas estão associadas com uma observação feita antes do estudo. 
+Aqui, chamamos o primeiro caso de experimentos de parcelas subdivididas (split plots) e o segundo caso de designs hierárquicos. A questão é que seus dataframes parecem idênticos, então é fácil analisar um caso erroneamente como se fosse o outro. Você precisa ser capaz de distinguir entre efeitos fixos e efeitos aleatórios em ambos os casos.
+
+Vamos a um exemplo:
+
+```{r bloco 1}
+yields <- read.table("G:/Outros computadores/Meu laptop/Meu Drive (ddnprata@gmail.com)/cursoCapacita/r-Basico/therbook/splityield.txt",header=T)
+attach(yields)
+names(yields)
+```
+
+A parte de efeitos fixos do modelo é especificada exatamente da mesma maneira que em um experimento fatorial simples:
+
+- yield ~ irrigation\*density\*fertilizer
+
+A parte de efeitos aleatórios do modelo diz que queremos que a variação aleatória entre por meio de efeitos na interceptação como random=~1. 
+Finalmente, definimos a estrutura espacial dos efeitos aleatórios após o símbolo ‘dado’ | como: block/irrigation/density refletindo os tamanhos de parcela progressivamente menores. Não há necessidade de especificar a menor escala espacial (parcelas de fertilizantes neste exemplo).
+
+```{r bloco 2}
+library(nlme)
+model <- lme(yield ~ irrigation*density*fertilizer,random= ~ 1|block/irrigation/density)
+summary(model)
+```
+Este resultado sugere que os únicos efeitos significativos são o efeito principal da irrigação (p = 0,0318) e a interação irrigação por densidade (p = 0,0057). A interação tripla não é significativa, então a removemos, ajustando todos os termos a interações bidirecionais:
+
+```{r bloco 3}
+model <- lme(yield~(irrigation+density+fertilizer)^2,
+random=~1|block/irrigation/density)
+summary(model)
+```
+
+A interação fertilizante por densidade não é significativa, então a removemos:
+
+```{r bloco 4}
+model <- lme(yield~irrigation*density+irrigation*fertilizer,
+random=~1|block/irrigation/density)
+summary(model)
+```
+
+Tanto a irrigação por fertilizantes como a irrigação por interacções de densidade são agora altamente significativas. O efeito principal aparentemente não significativo da densidade é espúrio porque a densidade aparece em uma interação significativa com a irrigação. A moral é que você deve simplificar o modelo para obter os valores de p apropriados.
+Lembre-se, também, que se você quiser usar anova para comparar modelos mistos com diferentes estruturas de efeitos fixos, então você deve usar a máxima verossimilhança (método = "ML" em lme) em vez da máxima verossimilhança restrita padrão (REML). Aqui está a análise novamente, mas desta vez usando anova para comparar modelos com efeitos fixos progressivamente simplificados:
+
+```{r bloco 5}
+model.lme <- lme(yield~irrigation*density*fertilizer,
+random=~ 1| block/irrigation/density,method="ML")
+model.lme.2 <- update(model.lme,~. - irrigation:density:fertilizer)
+anova(model.lme,model.lme.2)
+```
+
+```{r bloco 6}
+model.lme.3 <- update(model.lme.2,~. - density:fertilizer)
+anova(model.lme.3,model.lme.2)
+```
+
+```{r bloco 7}
+model.lme.4 <- update(model.lme.3,~. - irrigation:fertilizer)
+anova(model.lme.3,model.lme.4)
+```
+
+```{r bloco 8}
+model.lme.5 <- update(model.lme.2,~. - irrigation:density)
+anova(model.lme.5,model.lme.2)
+```
+
+Você precisa fazer a simplificação do modelo em lme para descobrir a importância do efeito principal e dos termos de interação, mas vale a pena, porque a análise lme pode ser mais poderosa. O modelo mínimo adequado sob o lme é:
+
+```{r bloco 9}
+summary(model.lme.3)
+```
+
+Você deve prestar atenção especial à coluna de graus de liberdade. Observe que os graus de liberdade não são pseudo-replicados: existem apenas 3 d.f. para testar o efeito principal da irrigação; 12 d.f. para testar a irrigação por interação de densidade e 44 d.f. para irrigação por fertilizante (isto é 36+4+ 4=44 após simplificação do modelo). Além disso, lembre-se de que você deve simplificar o modelo usando a máxima verossimilhança (método = "ML") porque não pode usar anova para comparar modelos com diferentes estruturas de efeito fixo usando REML.
+
+Os gráficos de verificação do modelo mostram que os resíduos se comportam bem:
+
+```{r bloco 10}
+plot(model.lme.3)
+```
+a variável de resposta é uma função razoavelmente linear dos valores ajustados:
+```{r bloco 11}
+plot(model.lme.3,yield~fitted(.))
+```
+e os erros estão razoavelmente próximos da distribuição normal em todos os quatro blocos:
+```{r bloco 12}
+qqnorm(model.lme.3,~ resid(.)| block)
+```
+
